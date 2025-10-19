@@ -20,11 +20,11 @@ class GoblinGame {
 
   init() {
     const grid = document.querySelector(".game-grid");
-    // Clear existing grid
+    // Очистка игрового поля
     grid.innerHTML = '';
     this.cells = [];
 
-    // Create grid cells
+    // Создание ячеек игрового поля
     for (let i = 0; i < this.gridSize * this.gridSize; i++) {
       const cell = document.createElement("div");
       cell.classList.add("cell");
@@ -39,16 +39,16 @@ class GoblinGame {
   }
 
   startNewGame() {
-    // Clear any existing timeouts/intervals
+    // Очистка всех таймеров и интервалов
     clearTimeout(this.moveTimeout);
     clearInterval(this.interval);
 
-    // Reset game state
+    // Сброс состояния игры
     this.scoreboard.reset();
     this.misses = 0;
     this.scoreboard.updateMisses(this.misses);
 
-    // Remove goblin if it exists
+    // Удаление гоблина, если он существует
     if (this.currentPosition !== -1 && this.cells[this.currentPosition]) {
       const currentCell = this.cells[this.currentPosition];
       const goblinElement = currentCell.querySelector('.goblin');
@@ -58,17 +58,17 @@ class GoblinGame {
       this.currentPosition = -1;
     }
 
-    // Start the game loop
+    // Запуск игрового цикла
     this.interval = setInterval(() => this.gameLoop(), 1000);
   }
 
   gameLoop() {
-    // If goblin is already on the field, count it as a miss
+    // Если гоблин уже на поле, засчитываем промах
     if (this.currentPosition !== -1) {
       this.misses++;
       this.scoreboard.updateMisses(this.misses);
 
-      // Remove the goblin from the current position
+      // Удаление гоблина с текущей позиции
       const currentCell = this.cells[this.currentPosition];
       const goblinElement = currentCell.querySelector('.goblin');
       if (goblinElement) {
@@ -76,17 +76,17 @@ class GoblinGame {
       }
       this.currentPosition = -1;
 
-      // Check for game over
+      // Проверка на конец игры
       if (this.misses >= this.maxMisses) {
         this.endGame();
         return;
       }
     }
 
-    // Move the goblin to a new position
+    // Перемещение гоблина на новую позицию
     this.moveGoblin();
 
-    // Set a timeout to remove the goblin after 1 second
+    // Установка таймера для удаления гоблина через 1 секунду
     clearTimeout(this.moveTimeout);
     this.moveTimeout = setTimeout(() => {
       if (this.currentPosition !== -1) {
@@ -102,22 +102,27 @@ class GoblinGame {
   }
 
   moveGoblin() {
-    // Find a new random position that's different from the current one
+    if (this.cells.length === 0) return; // Проверка на пустой массив ячеек
+
+    // Поиск новой случайной позиции, отличной от текущей
     let newPosition;
+    let attempts = 0;
     do {
       newPosition = Math.floor(Math.random() * this.cells.length);
+      attempts++;
+      if (attempts > 100) break; // Защита от бесконечного цикла
     } while (newPosition === this.currentPosition && this.cells.length > 1);
 
-    // Remove goblin from current position
+    // Удаление гоблина с текущей позиции
     if (this.currentPosition !== -1 && this.cells[this.currentPosition]) {
       const currentCell = this.cells[this.currentPosition];
       const goblinElement = currentCell.querySelector('.goblin');
-      if (goblinElement) {
+      if (goblinElement && currentCell.contains(goblinElement)) {
         currentCell.removeChild(goblinElement);
       }
     }
 
-    // Add goblin to new position
+    // Добавление гоблина на новую позицию
     const newCell = this.cells[newPosition];
     if (newCell) {
       newCell.appendChild(this.goblin);
@@ -131,25 +136,26 @@ class GoblinGame {
 
     const goblin = cell.querySelector('.goblin');
     if (goblin) {
-      // Clicked on a goblin - score a point
+      // Попадание по гоблину - начисление очка
       this.scoreboard.updateScore();
-      // Remove the goblin immediately
+      // Немедленное удаление гоблина
       cell.removeChild(goblin);
       this.currentPosition = -1;
-      // Clear the timeout since we're removing the goblin manually
+      // Очистка таймаута, так как гоблин удален вручную
       clearTimeout(this.moveTimeout);
     }
   }
 
   endGame() {
-    clearInterval(this.interval);
-    clearTimeout(this.moveTimeout);
+    // Очистка всех ожидающих операций
+    if (this.interval) clearInterval(this.interval);
+    if (this.moveTimeout) clearTimeout(this.moveTimeout);
 
-    // Remove the goblin from the board
+    // Удаление гоблина с доски, если он существует
     if (this.currentPosition !== -1 && this.cells[this.currentPosition]) {
       const currentCell = this.cells[this.currentPosition];
       const goblinElement = currentCell.querySelector('.goblin');
-      if (goblinElement) {
+      if (goblinElement && currentCell.contains(goblinElement)) {
         currentCell.removeChild(goblinElement);
       }
       this.currentPosition = -1;
