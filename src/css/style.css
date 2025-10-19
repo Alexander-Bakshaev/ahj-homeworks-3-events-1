@@ -101,8 +101,8 @@
 /* Кастомный курсор-молоток */
 .custom-cursor {
   position: fixed;
-  width: 120px;
-  height: 120px;
+  width: 80px;
+  height: 80px;
   background: url('../img/hammer.png') no-repeat center/contain;
   transform: translate(-50%, -50%) rotate(20deg);
   transform-origin: 80% 80%;
