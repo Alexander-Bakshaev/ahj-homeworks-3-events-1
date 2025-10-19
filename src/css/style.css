@@ -1,0 +1,127 @@
+/* Стили для игрового поля */
+.game-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding: 20px 0;
+}
+
+/* Стили для сетки */
+.game-grid {
+  display: grid;
+  grid-template: repeat(4, 100px) / repeat(4, 100px);
+  gap: 6px;
+  margin: 0 auto;
+  padding: 8px;
+  background: #f0f0f0;
+  border-radius: 6px;
+}
+
+/*Alexander-Bakshaev*/
+/* Ячейки игрового поля */
+.cell {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Гоблин */
+.goblin {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.goblin:hover {
+  transform: scale(1.1);
+}
+
+/* Стили для счётчика очков */
+.scoreboard {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 30px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.scoreboard-score,
+.scoreboard-misses {
+  padding: 15px 25px;
+  border-radius: 10px;
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+  min-width: 100px;
+  text-align: center;
+}
+
+.scoreboard-score {
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+}
+
+.scoreboard-misses {
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+.scoreboard-score span,
+.scoreboard-misses span {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 5px 15px;
+  border-radius: 30px;
+  width: 100%;
+  display: block;
+  margin: 5px 0 0;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+.scoreboard-score:hover,
+.scoreboard-misses:hover {
+  transform: translateY(-2px);
+}
+
+/* Кастомный курсор-молоток */
+.custom-cursor {
+  position: fixed;
+  width: 120px;
+  height: 120px;
+  background: url('../img/hammer.png') no-repeat center/contain;
+  transform: translate(-50%, -50%) rotate(20deg);
+  transform-origin: 80% 80%;
+  z-index: 1000;
+  pointer-events: none;
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+  filter: drop-shadow(2px 4px 3px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes hammerHit {
+  0%, 100% {
+    transform: translate(-50%, -50%) rotate(20deg);
+  }
+  50% {
+    transform: translate(-50%, -30%) rotate(-30deg);
+  }
+}
+
+.custom-cursor.hit {
+  animation: hammerHit 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
