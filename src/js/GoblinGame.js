@@ -8,6 +8,7 @@ class GoblinGame {
     this.gridSize = 4;  // Размер игрового поля (4x4)
     this.cells = [];    // Массив ячеек игрового поля
     this.currentPosition = -1;  // Текущая позиция гоблина (-1 - гоблин не на поле)
+    this.lastPosition = -1;     // Последняя показанная позиция (для исключения повторов)
     this.misses = 0;            // Количество промахов
     this.maxMisses = 5;         // Максимальное количество промахов до конца игры
     this.lastMoveTime = 0;      // Время последнего перемещения гоблина
@@ -24,7 +25,6 @@ class GoblinGame {
     this.goblin.classList.add("goblin");
 
     this.moveTimeout = null;  // Таймер для задержки хода
-    this.interval = null;     // Интервал для игрового цикла
   }
 
   /**
@@ -55,12 +55,12 @@ class GoblinGame {
     this.scoreboard.updateMisses(this.misses);
     this.removeGoblin();
 
-    this.interval = setInterval(() => this.gameLoop(), 1000);
+    // Запускаем игровой цикл (далее он сам планирует следующий ход через setTimeout)
+    this.gameLoop();
   }
 
   clearTimers() {
     clearTimeout(this.moveTimeout);
-    clearInterval(this.interval);
   }
 
   removeGoblin() {
@@ -91,10 +91,7 @@ class GoblinGame {
     // Устанавливаем таймер для следующего хода
     clearTimeout(this.moveTimeout);
     this.moveTimeout = setTimeout(() => {
-      if (this.currentPosition !== -1) {
-        this.removeGoblin();
-        if (this.misses < this.maxMisses) this.gameLoop();
-      }
+      if (this.misses < this.maxMisses) this.gameLoop();
     }, 1000);
   }
 
@@ -104,18 +101,24 @@ class GoblinGame {
   moveGoblin() {
     if (!this.cells.length) return;
 
-    // Получаем все возможные позиции, исключая текущую
-    const availablePositions = this.cells
-      .map((_, i) => i)
-      .filter((i) => i !== this.currentPosition);
+    // Выбираем позицию, отличную от последней показанной (если ячеек > 1)
+    let newPosition;
+    do {
+      newPosition = Math.floor(Math.random() * this.cells.length);
+    } while (this.cells.length > 1 && newPosition === this.lastPosition);
 
-    // Выбираем случайную позицию из доступных
-    const newPosition = availablePositions[Math.floor(Math.random() * availablePositions.length)];
     const newCell = this.cells[newPosition];
+    if (!newCell) return;
 
     // Перемещаем гоблина в новую ячейку
     newCell.append(this.goblin);
+
+    // Обновляем метки положения
     this.currentPosition = newPosition;
+    this.lastPosition = newPosition;
+
+    // Минимальное логирование для проверки повторов
+    console.log('[move] pos=', newPosition);
   }
 
   /**
