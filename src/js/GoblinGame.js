@@ -4,168 +4,172 @@ import Cursor from "./Cursor";
 
 class GoblinGame {
   constructor() {
-    this.gridSize = 4;
-    this.cells = [];
+    // Основные настройки игры
+    this.gridSize = 4;  // Размер игрового поля (4x4)
+    this.cells = [];    // Массив ячеек игрового поля
+    this.currentPosition = -1;  // Текущая позиция гоблина (-1 - гоблин не на поле)
+    this.misses = 0;            // Количество промахов
+    this.maxMisses = 5;         // Максимальное количество промахов до конца игры
+    this.lastMoveTime = 0;      // Время последнего перемещения гоблина
+
+    // Инициализация компонентов
+    this.scoreboard = new Scoreboard();  // Таблица очков
+    this.cursor = new Cursor();          // Кастомный курсор
+
+    // Создание элемента гоблина
     this.goblin = document.createElement("img");
-    this.goblin.src = goblinImage;
+    Object.assign(this.goblin, {
+      src: goblinImage, alt: "Гоблин"
+    });
     this.goblin.classList.add("goblin");
-    this.currentPosition = -1;
-    this.misses = 0;
-    this.maxMisses = 5;
-    this.scoreboard = new Scoreboard();
-    this.cursor = new Cursor();
-    this.moveTimeout = null;
-    this.interval = null;
+
+    this.moveTimeout = null;  // Таймер для задержки хода
+    this.interval = null;     // Интервал для игрового цикла
   }
 
+  /**
+   * Инициализация игрового поля и начало новой игры
+   */
   init() {
     const grid = document.querySelector(".game-grid");
-    // Очистка игрового поля
-    grid.innerHTML = '';
-    this.cells = [];
+    grid.innerHTML = "";  // Очищаем игровое поле
 
-    // Создание ячеек игрового поля
-    for (let i = 0; i < this.gridSize * this.gridSize; i++) {
+    // Создаем ячейки игрового поля
+    this.cells = Array.from({length: this.gridSize ** 2}, (_, i) => {
       const cell = document.createElement("div");
-      cell.classList.add("cell");
+      cell.className = "cell";
       cell.dataset.index = i;
-      grid.appendChild(cell);
-      this.cells.push(cell);
-
-      cell.addEventListener("click", (event) => this.handleClick(event));
-    }
+      cell.addEventListener("click", (e) => this.handleClick(e));
+      grid.append(cell);
+      return cell;
+    });
 
     this.startNewGame();
   }
 
   startNewGame() {
-    // Очистка всех таймеров и интервалов
-    clearTimeout(this.moveTimeout);
-    clearInterval(this.interval);
+    this.clearTimers();
 
-    // Сброс состояния игры
     this.scoreboard.reset();
     this.misses = 0;
     this.scoreboard.updateMisses(this.misses);
+    this.removeGoblin();
 
-    // Удаление гоблина, если он существует
-    if (this.currentPosition !== -1 && this.cells[this.currentPosition]) {
-      const currentCell = this.cells[this.currentPosition];
-      const goblinElement = currentCell.querySelector('.goblin');
-      if (goblinElement) {
-        currentCell.removeChild(goblinElement);
-      }
-      this.currentPosition = -1;
-    }
-
-    // Запуск игрового цикла
     this.interval = setInterval(() => this.gameLoop(), 1000);
   }
 
+  clearTimers() {
+    clearTimeout(this.moveTimeout);
+    clearInterval(this.interval);
+  }
+
+  removeGoblin() {
+    if (this.currentPosition === -1) return;
+    const cell = this.cells[this.currentPosition];
+    cell?.querySelector(".goblin")?.remove();
+    this.currentPosition = -1;
+  }
+
+  /**
+   * Основной игровой цикл
+   */
   gameLoop() {
-    // Если гоблин уже на поле, засчитываем промах
+    // Проверяем, не упустили ли мы гоблина в предыдущем ходе
     if (this.currentPosition !== -1) {
       this.misses++;
       this.scoreboard.updateMisses(this.misses);
+      this.removeGoblin();
 
-      // Удаление гоблина с текущей позиции
-      const currentCell = this.cells[this.currentPosition];
-      const goblinElement = currentCell.querySelector('.goblin');
-      if (goblinElement) {
-        currentCell.removeChild(goblinElement);
-      }
-      this.currentPosition = -1;
-
-      // Проверка на конец игры
-      if (this.misses >= this.maxMisses) {
-        this.endGame();
-        return;
-      }
+      // Завершаем игру при достижении максимального числа промахов
+      if (this.misses >= this.maxMisses) return this.endGame();
     }
 
-    // Перемещение гоблина на новую позицию
+    // Перемещаем гоблина и обновляем время последнего хода
     this.moveGoblin();
+    this.lastMoveTime = Date.now();
 
-    // Установка таймера для удаления гоблина через 1 секунду
+    // Устанавливаем таймер для следующего хода
     clearTimeout(this.moveTimeout);
     this.moveTimeout = setTimeout(() => {
       if (this.currentPosition !== -1) {
-        this.cells.forEach(cell => {
-          const goblin = cell.querySelector('.goblin');
-          if (goblin) {
-            cell.removeChild(goblin);
-          }
-        });
-        this.currentPosition = -1;
+        this.removeGoblin();
+        if (this.misses < this.maxMisses) this.gameLoop();
       }
     }, 1000);
   }
 
+  /**
+   * Перемещает гоблина в случайную ячейку, отличную от текущей
+   */
   moveGoblin() {
-    if (this.cells.length === 0) return; // Проверка на пустой массив ячеек
+    if (!this.cells.length) return;
 
-    // Поиск новой случайной позиции, отличной от текущей
-    let newPosition;
-    let attempts = 0;
-    do {
-      newPosition = Math.floor(Math.random() * this.cells.length);
-      attempts++;
-      if (attempts > 100) break; // Защита от бесконечного цикла
-    } while (newPosition === this.currentPosition && this.cells.length > 1);
+    // Получаем все возможные позиции, исключая текущую
+    const availablePositions = this.cells
+      .map((_, i) => i)
+      .filter((i) => i !== this.currentPosition);
 
-    // Удаление гоблина с текущей позиции
-    if (this.currentPosition !== -1 && this.cells[this.currentPosition]) {
-      const currentCell = this.cells[this.currentPosition];
-      const goblinElement = currentCell.querySelector('.goblin');
-      if (goblinElement && currentCell.contains(goblinElement)) {
-        currentCell.removeChild(goblinElement);
-      }
-    }
-
-    // Добавление гоблина на новую позицию
+    // Выбираем случайную позицию из доступных
+    const newPosition = availablePositions[Math.floor(Math.random() * availablePositions.length)];
     const newCell = this.cells[newPosition];
-    if (newCell) {
-      newCell.appendChild(this.goblin);
-      this.currentPosition = newPosition;
-    }
+
+    // Перемещаем гоблина в новую ячейку
+    newCell.append(this.goblin);
+    this.currentPosition = newPosition;
   }
 
+  /**
+   * Обработчик клика по ячейке
+   * @param {Event} event - Событие клика
+   */
   handleClick(event) {
-    const cell = event.target.closest('.cell');
-    if (!cell) return;
+    const cell = event.target.closest(".cell");
+    if (!cell?.querySelector(".goblin")) return;  // Пропускаем клик, если в ячейке нет гоблина
 
-    const goblin = cell.querySelector('.goblin');
-    if (goblin) {
-      // Попадание по гоблину - начисление очка
-      this.scoreboard.updateScore();
-      // Немедленное удаление гоблина
-      cell.removeChild(goblin);
-      this.currentPosition = -1;
-      // Очистка таймаута, так как гоблин удален вручную
-      clearTimeout(this.moveTimeout);
+    // Обработка попадания
+    this.scoreboard.updateScore();
+    clearTimeout(this.moveTimeout);
+    this.removeGoblin();
+
+    // Рассчитываем задержку до следующего хода
+    const timeElapsed = Date.now() - this.lastMoveTime;
+    const delay = Math.max(1000 - timeElapsed, 0);
+
+    // Продолжаем игру, если еще есть попытки
+    if (this.misses < this.maxMisses) {
+      this.moveTimeout = setTimeout(() => this.gameLoop(), delay);
     }
   }
 
   endGame() {
-    // Очистка всех ожидающих операций
-    if (this.interval) clearInterval(this.interval);
-    if (this.moveTimeout) clearTimeout(this.moveTimeout);
+    this.clearTimers();
+    this.removeGoblin();
 
-    // Удаление гоблина с доски, если он существует
-    if (this.currentPosition !== -1 && this.cells[this.currentPosition]) {
-      const currentCell = this.cells[this.currentPosition];
-      const goblinElement = currentCell.querySelector('.goblin');
-      if (goblinElement && currentCell.contains(goblinElement)) {
-        currentCell.removeChild(goblinElement);
-      }
-      this.currentPosition = -1;
-    }
+    const modal = document.getElementById("gameModal");
+    const finalScore = document.getElementById("finalScore");
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    const closeModalBtn = document.getElementById("closeModalBtn");
 
-    setTimeout(() => {
-      if (confirm(`Игра окончена! Ваш результат: ${this.scoreboard.score}\n\nХотите сыграть снова?`)) {
-        this.startNewGame();
-      }
-    }, 100);
+    finalScore.textContent = this.scoreboard.score;
+
+    modal.style.display = "flex";
+    requestAnimationFrame(() => modal.classList.add("show"));
+
+    const closeModal = () => {
+      modal.classList.remove("show");
+      setTimeout(() => (modal.style.display = "none"), 300);
+    };
+
+    const playAgain = () => {
+      closeModal();
+      this.startNewGame();
+    };
+
+    playAgainBtn.replaceWith(playAgainBtn.cloneNode(true));
+    closeModalBtn.replaceWith(closeModalBtn.cloneNode(true));
+
+    document.getElementById("playAgainBtn").addEventListener("click", playAgain);
+    document.getElementById("closeModalBtn").addEventListener("click", closeModal);
   }
 }
 
